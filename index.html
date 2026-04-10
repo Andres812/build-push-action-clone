@@ -125,6 +125,7 @@ p {
     <button onclick="show('ci')">CI/CD</button>
     <button onclick="show('estructura')">Estructura</button>
     <button onclick="show('docker')">Docker</button>
+    <button onclick="show('explorador')">Explorador</button>
 </div>
 
 <div class="content">
@@ -245,7 +246,24 @@ p {
         </div>
     </div>
 </div>
+<div id="explorador" class="section">
+    <h1>Explorador del Proyecto</h1>
+    <p>Haz clic en una carpeta para ver su función dentro del flujo DevOps.</p>
 
+    <div class="pipeline">
+        <div class="box" onclick="explorer('src')">📁 src</div>
+        <div class="box" onclick="explorer('github')">📁 .github</div>
+        <div class="box" onclick="explorer('workflows')">📁 workflows</div>
+        <div class="box" onclick="explorer('tests')">📁 tests</div>
+        <div class="box" onclick="explorer('dist')">📁 dist</div>
+        <div class="box" onclick="explorer('docker')">📄 Dockerfile</div>
+        <div class="box" onclick="explorer('package')">📄 package.json</div>
+    </div>
+
+    <div id="explorerBox" class="card">
+        Selecciona un elemento para ver su explicación.
+    </div>
+</div>
 </div>
 
 <script>
@@ -267,6 +285,25 @@ function info(type) {
     };
 
     document.getElementById('infoBox').innerText = data[type];
+}
+function explorer(type) {
+    const data = {
+        src: "Contiene el código fuente en TypeScript. Aquí se desarrolla la lógica principal del proyecto.",
+        
+        github: "Carpeta usada por GitHub para configuraciones automáticas del repositorio.",
+        
+        workflows: "Aquí se definen los pipelines de GitHub Actions. Automatiza build, test y deploy.",
+        
+        tests: "Contiene pruebas automatizadas usando Vitest para validar el código.",
+        
+        dist: "Resultado del build. Código listo para producción.",
+        
+        docker: "Archivo que define cómo se construye la imagen Docker del proyecto.",
+        
+        package: "Define dependencias, scripts y configuración del proyecto Node.js."
+    };
+
+    document.getElementById('explorerBox').innerText = data[type];
 }
 </script>
 
