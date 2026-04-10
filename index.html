@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DevOps Dashboard</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 220px;
+    background: #020617;
+    height: 100vh;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    margin-bottom: 20px;
+}
+
+.sidebar button {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #1e293b;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.sidebar button:hover {
+    background: #38bdf8;
+}
+
+/* CONTENIDO */
+.content {
+    flex: 1;
+    padding: 40px;
+}
+
+/* SECCIONES */
+.section {
+    display: none;
+}
+
+.active {
+    display: block;
+}
+
+/* CARDS */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* PIPELINE */
+.pipeline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.box {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.box:hover {
+    background: #38bdf8;
+    transform: scale(1.05);
+}
+
+.arrow {
+    font-size: 20px;
+}
+
+#infoBox {
+    margin-top: 20px;
+}
+
+/* TITULOS */
+h1 {
+    margin-bottom: 10px;
+}
+
+p {
+    opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>DevOps</h2>
+    <button onclick="show('home')">Inicio</button>
+    <button onclick="show('pipeline')">Pipeline</button>
+    <button onclick="show('ci')">CI/CD</button>
+    <button onclick="show('estructura')">Estructura</button>
+    <button onclick="show('docker')">Docker</button>
+</div>
+
+<div class="content">
+
+<!-- INICIO -->
+<div id="home" class="section active">
+    <h1>Dashboard DevOps</h1>
+    <p>Visualización del flujo de integración y despliegue del proyecto.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h3>⚙️ Integración Continua</h3>
+            <p>Automatiza pruebas y validaciones en cada cambio.</p>
+        </div>
+
+        <div class="card">
+            <h3>🚀 Pipeline</h3>
+            <p>Define el flujo desde código hasta despliegue.</p>
+        </div>
+
+        <div class="card">
+            <h3>📦 Docker</h3>
+            <p>Empaqueta la aplicación en contenedores.</p>
+        </div>
+
+        <div class="card">
+            <h3>🧪 Testing</h3>
+            <p>Uso de Vitest para asegurar calidad del código.</p>
+        </div>
+    </div>
+</div>
+
+<!-- PIPELINE -->
+<div id="pipeline" class="section">
+    <h1>Pipeline</h1>
+    <p>Flujo automatizado del proyecto.</p>
+
+    <div class="pipeline">
+        <div class="box" onclick="info('codigo')">Código</div>
+        <div class="arrow">→</div>
+        <div class="box" onclick="info('push')">Push</div>
+        <div class="arrow">→</div>
+        <div class="box" onclick="info('ci')">CI</div>
+        <div class="arrow">→</div>
+        <div class="box" onclick="info('test')">Test</div>
+        <div class="arrow">→</div>
+        <div class="box" onclick="info('build')">Build</div>
+        <div class="arrow">→</div>
+        <div class="box" onclick="info('docker')">Docker</div>
+    </div>
+
+    <div id="infoBox" class="card">
+        Haz clic en un paso del pipeline.
+    </div>
+</div>
+
+<!-- CI/CD -->
+<div id="ci" class="section">
+    <h1>CI/CD</h1>
+
+    <div class="grid">
+        <div class="card">
+            <h3>CI (Integración Continua)</h3>
+            <p>
+                Cada push ejecuta automáticamente instalación de dependencias,
+                pruebas y build.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>CD (Despliegue Continuo)</h3>
+            <p>
+                Después del build, el proyecto puede desplegarse automáticamente
+                usando Docker.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>GitHub Actions</h3>
+            <p>
+                Los workflows definen los pasos del pipeline en .github/workflows.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ESTRUCTURA -->
+<div id="estructura" class="section">
+    <h1>Estructura</h1>
+
+    <div class="grid">
+        <div class="card"><b>src/</b><br>Código fuente en TypeScript</div>
+        <div class="card"><b>dist/</b><br>Build generado</div>
+        <div class="card"><b>.github/</b><br>Workflows CI/CD</div>
+        <div class="card"><b>Dockerfile</b><br>Configuración Docker</div>
+        <div class="card"><b>package.json</b><br>Dependencias y scripts</div>
+    </div>
+</div>
+
+<!-- DOCKER -->
+<div id="docker" class="section">
+    <h1>Docker</h1>
+
+    <div class="grid">
+        <div class="card">
+            <h3>¿Qué hace?</h3>
+            <p>Empaqueta la app con sus dependencias.</p>
+        </div>
+
+        <div class="card">
+            <h3>Ventaja</h3>
+            <p>Funciona igual en cualquier entorno.</p>
+        </div>
+
+        <div class="card">
+            <h3>En el proyecto</h3>
+            <p>Se genera una imagen después del build.</p>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+function show(section) {
+    document.querySelectorAll('.section').forEach(s => {
+        s.classList.remove('active');
+    });
+    document.getElementById(section).classList.add('active');
+}
+
+function info(type) {
+    const data = {
+        codigo: "Desarrollo en src con TypeScript.",
+        push: "Se sube a GitHub activando el flujo.",
+        ci: "GitHub Actions ejecuta automatización.",
+        test: "Pruebas con Vitest.",
+        build: "Compilación con ncc.",
+        docker: "Empaquetado en contenedor Docker."
+    };
+
+    document.getElementById('infoBox').innerText = data[type];
+}
+</script>
+
+</body>
+</html>
