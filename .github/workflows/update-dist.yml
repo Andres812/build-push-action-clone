@@ -1,0 +1,101 @@
+# ============================
+# WORKFLOW: UPDATE-DIST (ACTUALIZAR ARCHIVOS GENERADOS)
+# ============================
+name: update-dist  # Nombre del workflow
+
+# ============================
+# PERMISOS GENERALES
+# ============================
+permissions:
+  contents: read  # Solo lectura del repositorio
+
+# ============================
+# CONTROL DE CONCURRENCIA
+# ============================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}  # Agrupa ejecuciones por workflow + rama
+  cancel-in-progress: true  # Cancela ejecuciones anteriores si hay una nueva
+
+# ============================
+# EVENTOS QUE DISPARAN EL WORKFLOW
+# ============================
+on:
+  pull_request:
+    types:
+      - opened        # Cuando se abre un PR
+      - synchronize   # Cuando se actualiza el PR
+
+# ============================
+# JOB PRINCIPAL
+# ============================
+jobs:
+  update-dist:
+
+    # Solo se ejecuta si:
+    # - El PR fue creado por dependabot
+    # - El repositorio es el mismo (no forks)
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == github.event.pull_request.head.repo.full_name
+
+    runs-on: ubuntu-latest  # Se ejecuta en Linux
+
+    steps:
+      # ============================
+      # PASO 1: GENERAR TOKEN DE GITHUB APP
+      # ============================
+      - name: GitHub auth token from GitHub App
+        id: docker-read-app
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        with:
+          app-id: ${{ secrets.GHACTIONS_REPO_WRITE_APP_ID }}          # ID de la app
+          private-key: ${{ secrets.GHACTIONS_REPO_WRITE_APP_PRIVATE_KEY }}  # Llave privada
+          owner: docker
+        # Genera un token para poder hacer commits automáticamente
+
+      # ============================
+      # PASO 2: CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}  # Rama del PR
+          fetch-depth: 0  # Trae todo el historial
+          token: ${{ steps.docker-read-app.outputs.token }}  # Usa token generado
+        # Clona el repo con permisos para hacer push
+
+      # ============================
+      # PASO 3: BUILD DEL PROYECTO
+      # ============================
+      - name: Build
+        uses: docker/bake-action@82490499d2e5613fcead7e128237ef0b0ea210f7 # v7.0.0
+        with:
+          source: .       # Usa el repo actual
+          targets: build  # Ejecuta el target "build"
+        # Genera archivos (como carpeta dist)
+
+      # ============================
+      # PASO 4: COMMIT Y PUSH AUTOMÁTICO
+      # ============================
+      - name: Commit and push dist
+        run: |
+          # Verifica si hubo cambios en la carpeta dist
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            (
+              set -x
+
+              # Configura usuario de git
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+              # Agrega cambios
+              git add dist
+
+              # Hace commit
+              git commit -m "chore: update generated content"
+
+              # Hace push a la misma rama
+              git push
+            )
+          else
+            # Si no hay cambios
+            echo "No changes in dist"
+          fi

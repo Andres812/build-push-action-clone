@@ -1,0 +1,85 @@
+# ============================
+# WORKFLOW: VALIDATE (VALIDACIÓN)
+# ============================
+name: validate  # Nombre del workflow
+
+# ============================
+# PERMISOS GENERALES
+# ============================
+permissions:
+  contents: read  # Solo permite leer el repositorio
+
+# ============================
+# CONTROL DE CONCURRENCIA
+# ============================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}  # Agrupa por workflow + rama
+  cancel-in-progress: true  # Cancela ejecuciones anteriores si hay una nueva
+
+# ============================
+# EVENTOS QUE DISPARAN EL WORKFLOW
+# ============================
+on:
+  push:
+    branches:
+      - 'master'        # Se ejecuta en cambios a master
+      - 'releases/v*'   # También en ramas de versiones
+  pull_request:         # También en Pull Requests
+
+# ============================
+# JOB 1: PREPARAR MATRIZ
+# ============================
+jobs:
+  prepare:
+    runs-on: ubuntu-latest  # Se ejecuta en Linux
+
+    # Salida que se usará en el siguiente job
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+
+    steps:
+      # ============================
+      # PASO 1: CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # Descarga el código del repositorio
+
+      # ============================
+      # PASO 2: GENERAR MATRIZ DINÁMICA
+      # ============================
+      - name: Generate matrix
+        id: generate
+        uses: docker/bake-action/subaction/matrix@82490499d2e5613fcead7e128237ef0b0ea210f7 # v7.0.0
+        with:
+          target: validate
+        # Genera dinámicamente una matriz de tareas basada en configuración (docker-bake)
+
+# ============================
+# JOB 2: VALIDAR
+# ============================
+  validate:
+    runs-on: ubuntu-latest  # Se ejecuta en Linux
+
+    needs:
+      - prepare  # Espera a que termine el job "prepare"
+
+    # ============================
+    # MATRIZ DE EJECUCIÓN
+    # ============================
+    strategy:
+      fail-fast: false  # No cancela todo si uno falla
+
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+        # Usa la matriz generada dinámicamente
+
+    steps:
+      # ============================
+      # PASO: EJECUTAR VALIDACIÓN
+      # ============================
+      - name: Validate
+        uses: docker/bake-action@82490499d2e5613fcead7e128237ef0b0ea210f7 # v7.0.0
+        with:
+          targets: ${{ matrix.target }}
+        # Ejecuta validaciones según cada elemento de la matriz

@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 2
+    groups:
+      crazy-max-dot-github:
+        patterns:
+          - "crazy-max/.github/*"
+    labels:
+      - "dependencies"
+      - "bot"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 2
+    versioning-strategy: "increase"
+    allow:
+      - dependency-type: "production"
+    labels:
+      - "dependencies"
+      - "bot"

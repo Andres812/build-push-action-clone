@@ -1,0 +1,62 @@
+# ============================
+# WORKFLOW: TEST (PRUEBAS)
+# ============================
+name: test  # Nombre del workflow
+
+# ============================
+# PERMISOS GENERALES
+# ============================
+permissions:
+  contents: read  # Solo lectura del repositorio
+
+# ============================
+# CONTROL DE CONCURRENCIA
+# ============================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}  # Agrupa ejecuciones por workflow + rama
+  cancel-in-progress: true  # Cancela ejecuciones anteriores si hay una nueva
+
+# ============================
+# EVENTOS QUE DISPARAN EL WORKFLOW
+# ============================
+on:
+  push:
+    branches:
+      - 'master'        # Se ejecuta en cambios a master
+      - 'releases/v*'   # También en ramas de versiones
+  pull_request:         # También se ejecuta en Pull Requests
+
+# ============================
+# JOB PRINCIPAL: TEST
+# ============================
+jobs:
+  test:
+    runs-on: ubuntu-latest  # Se ejecuta en Linux
+
+    steps:
+      # ============================
+      # PASO 1: CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # Descarga el código del repositorio
+
+      # ============================
+      # PASO 2: EJECUTAR PRUEBAS
+      # ============================
+      - name: Test
+        uses: docker/bake-action@82490499d2e5613fcead7e128237ef0b0ea210f7 # v7.0.0
+        with:
+          source: .      # Usa el código actual del repo
+          targets: test  # Ejecuta el target "test" definido en Docker Bake
+        # Ejecuta pruebas usando Docker (probablemente definidas en docker-bake.hcl)
+
+      # ============================
+      # PASO 3: SUBIR COBERTURA
+      # ============================
+      - name: Upload coverage
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        with:
+          files: ./coverage/clover.xml  # Archivo de cobertura generado por los tests
+          token: ${{ secrets.CODECOV_TOKEN }}  # Token para autenticar con Codecov
+        # Envía el reporte de cobertura de código a Codecov

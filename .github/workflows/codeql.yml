@@ -1,0 +1,82 @@
+# ============================
+# WORKFLOW: CODEQL (ANÁLISIS DE SEGURIDAD)
+# ============================
+name: codeql  # Nombre del workflow
+
+# ============================
+# PERMISOS GENERALES
+# ============================
+permissions:
+  contents: read  # Solo permite leer el contenido del repositorio
+
+# ============================
+# EVENTOS QUE DISPARAN EL WORKFLOW
+# ============================
+on:
+  push:
+    branches:
+      - 'master'        # Se ejecuta cuando haces push a master
+      - 'releases/v*'   # También en ramas de releases (ej: releases/v1.0)
+  pull_request:         # También se ejecuta en Pull Requests
+
+# ============================
+# VARIABLES DE ENTORNO
+# ============================
+env:
+  NODE_VERSION: "24"  # Versión de Node.js que se usará
+
+# ============================
+# JOB PRINCIPAL: ANÁLISIS
+# ============================
+jobs:
+  analyze:
+    runs-on: ubuntu-latest  # Se ejecuta en una máquina virtual Linux
+
+    # Permisos específicos para este job
+    permissions:
+      contents: read            # Leer el repo
+      security-events: write    # Escribir resultados de seguridad (CodeQL)
+
+    steps:
+      # ============================
+      # PASO 1: CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # Descarga el código del repositorio en la máquina virtual
+
+      # ============================
+      # PASO 2: ACTIVAR COREPACK (GESTOR DE PAQUETES)
+      # ============================
+      - name: Enable corepack
+        run: |
+          corepack enable      # Activa soporte para Yarn y otros gestores
+          yarn --version       # Verifica que Yarn esté funcionando
+
+      # ============================
+      # PASO 3: CONFIGURAR NODE.JS
+      # ============================
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}  # Usa la versión definida arriba
+        # Prepara el entorno para ejecutar código JavaScript/TypeScript
+
+      # ============================
+      # PASO 4: INICIALIZAR CODEQL
+      # ============================
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        with:
+          languages: javascript-typescript  # Lenguajes a analizar
+          build-mode: none                 # No necesita build (proyecto simple)
+        # Configura CodeQL para analizar vulnerabilidades en el código
+
+      # ============================
+      # PASO 5: EJECUTAR ANÁLISIS
+      # ============================
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        with:
+          category: "/language:javascript-typescript"
+        # Ejecuta el análisis y envía resultados a GitHub Security

@@ -1,0 +1,53 @@
+# ============================
+# WORKFLOW: PUBLISH (PUBLICACIÓN)
+# ============================
+name: publish  # Nombre del workflow
+
+# ============================
+# PERMISOS GENERALES
+# ============================
+permissions:
+  contents: read  # Solo permite leer el repositorio
+
+# ============================
+# CONTROL DE CONCURRENCIA
+# ============================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}  # Agrupa ejecuciones por workflow y rama/tag
+  cancel-in-progress: true  # Cancela ejecuciones anteriores si hay una nueva
+
+# ============================
+# EVENTO QUE DISPARA EL WORKFLOW
+# ============================
+on:
+  release:
+    types:
+      - published  # Se ejecuta cuando publicas un release en GitHub
+
+# ============================
+# JOB PRINCIPAL
+# ============================
+jobs:
+  publish:
+    runs-on: ubuntu-latest  # Se ejecuta en una máquina Linux
+
+    # Permisos específicos para este job
+    permissions:
+      contents: read   # Leer el repositorio
+      id-token: write  # Permite autenticación segura (OIDC)
+      packages: write  # Permite publicar paquetes/imágenes
+
+    steps:
+      # ============================
+      # PASO 1: CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # Descarga el código del repositorio
+
+      # ============================
+      # PASO 2: PUBLICAR EL ARTEFACTO
+      # ============================
+      - name: Publish
+        uses: actions/publish-immutable-action@4bc8754ffc40f27910afb20287dbbbb675a4e978 # v0.0.4
+        # Publica la action o paquete de forma inmutable (no se puede modificar después)

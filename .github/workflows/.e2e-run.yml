@@ -1,0 +1,201 @@
+# ============================
+# NOMBRE DEL WORKFLOW
+# ============================
+name: .e2e-run # Nombre del workflow reutilizable
+
+# ============================
+# PERMISOS
+# ============================
+permissions:
+  contents: read # Solo permite leer el repositorio
+
+# ============================
+# EVENTO QUE LO DISPARA
+# ============================
+on:
+  workflow_call: # Este workflow es reutilizable (lo llaman otros workflows)
+    inputs:
+      id:
+        required: false
+        type: string
+      type:
+        required: true
+        type: string # Tipo de ejecución (local o remote)
+      name:
+        required: true
+        type: string # Nombre del servicio
+      registry:
+        required: false
+        type: string # URL del registry
+      slug:
+        required: false
+        type: string # Nombre de la imagen
+    secrets:
+      registry_username:
+        required: false
+      registry_password:
+        required: false
+
+# ============================
+# VARIABLES DE ENTORNO
+# ============================
+env:
+  HARBOR_VERSION: v2.13.2 # Versión de Harbor
+  NEXUS_VERSION: 3.47.1 # Versión de Nexus
+  DISTRIBUTION_VERSION: 3.0.0 # Versión de Docker Distribution
+
+# ============================
+# JOBS
+# ============================
+jobs:
+  run:
+    runs-on: ubuntu-latest # Se ejecuta en Linux
+
+    # Ejecuta múltiples configuraciones (matriz)
+    strategy:
+      fail-fast: false # No cancela si uno falla
+      matrix:
+        include:
+          - buildx_version: edge
+            buildkit_image: moby/buildkit:latest
+          - buildx_version: latest
+            buildkit_image: moby/buildkit:buildx-stable-1
+          - buildx_version: https://github.com/docker/buildx.git#master
+            buildkit_image: moby/buildkit:master
+
+    steps:
+      # ============================
+      # CLONAR REPOSITORIO
+      # ============================
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      # ============================
+      # CONFIGURAR VARIABLES (LOCAL)
+      # ============================
+      - name: Set up env
+        if: inputs.type == 'local' # Solo si es entorno local
+        env:
+          ID: ${{ inputs.id }}
+        run: |
+          cat ./.github/e2e/${ID}/env >> $GITHUB_ENV # Carga variables
+
+      # ============================
+      # CONFIGURAR BUILDKIT
+      # ============================
+      - name: Set up BuildKit config
+        env:
+          TYPE: ${{ inputs.type }}
+        run: |
+          touch /tmp/buildkitd.toml # Crea archivo config
+          if [ "${TYPE}" = "local" ]; then
+            # Permite registry inseguro en local
+            echo -e "[registry.\"${{ env.REGISTRY_FQDN }}\"]\nhttp = true\ninsecure = true" > /tmp/buildkitd.toml
+          fi
+
+      # ============================
+      # CONFIGURAR DOCKER (LOCAL)
+      # ============================
+      - name: Set up Docker daemon
+        if: inputs.type == 'local'
+        run: |
+          # Si no existe config, la crea
+          if [ ! -e /etc/docker/daemon.json ]; then
+            echo '{}' | sudo tee /etc/docker/daemon.json >/dev/null
+          fi
+
+          # Agrega registry inseguro
+          DOCKERD_CONFIG=$(jq '.+{"insecure-registries":["http://${{ env.REGISTRY_FQDN }}"]}' /etc/docker/daemon.json)
+          sudo tee /etc/docker/daemon.json <<<"$DOCKERD_CONFIG" >/dev/null
+
+          cat /etc/docker/daemon.json # Muestra config
+          sudo service docker restart # Reinicia Docker
+
+      # ============================
+      # INSTALAR SERVICIO LOCAL
+      # ============================
+      - name: Install ${{ inputs.name }}
+        if: inputs.type == 'local'
+        env:
+          ID: ${{ inputs.id }}
+        run: |
+          sudo -E bash ./.github/e2e/${ID}/install.sh # Ejecuta instalación
+          sudo chown $(id -u):$(id -g) -R ~/.docker # Ajusta permisos
+
+      # ============================
+      # GENERAR METADATOS DE IMAGEN
+      # ============================
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf
+        with:
+          images: ${{ env.REGISTRY_SLUG || inputs.slug }}
+          tags: |
+            # Genera tags dependiendo del evento
+            type=ref,event=branch,enable=${{ matrix.buildx_version == 'latest' && matrix.buildkit_image == 'moby/buildkit:buildx-stable-1' }}
+            type=ref,event=tag,enable=${{ matrix.buildx_version == 'latest' && matrix.buildkit_image == 'moby/buildkit:buildx-stable-1' }}
+            type=raw,gh-runid-${{ github.run_id }}
+      
+      # ============================
+      # HABILITA MULTI-ARQUITECTURA
+      # ============================
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a
+
+      # ============================
+      # CONFIGURA BUILDX
+      # ============================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd
+        with:
+          version: ${{ matrix.buildx_version }}
+          buildkitd-config: /tmp/buildkitd.toml
+          buildkitd-flags: --debug --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+          driver-opts: |
+            image=${{ matrix.buildkit_image }}
+            network=host
+
+      # ============================
+      # LOGIN AL REGISTRY
+      # ============================
+      - name: Login to Registry
+        if: github.event_name != 'pull_request' && (inputs.type == 'remote' || env.REGISTRY_USER != '')
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
+        with:
+          registry: ${{ env.REGISTRY_FQDN || inputs.registry }}
+          username: ${{ env.REGISTRY_USER || secrets.registry_username }}
+          password: ${{ env.REGISTRY_PASSWORD || secrets.registry_password }}
+
+      # ============================
+      # BUILD Y PUSH DE IMAGEN
+      # ============================
+      - name: Build and push
+        uses: ./ # Usa esta misma action
+        with:
+          context: ./test
+          file: ./test/multi.Dockerfile
+          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x
+          push: ${{ github.event_name != 'pull_request' }} # Solo push si no es PR
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY_SLUG || inputs.slug }}:master
+          cache-to: type=inline
+
+      # ============================
+      # VERIFICAR IMAGEN
+      # ============================
+      - name: Inspect image
+        env:
+          SLUG: ${{ env.REGISTRY_SLUG || inputs.slug }}
+        run: |
+          docker pull ${SLUG}:${{ steps.meta.outputs.version }} # Descarga imagen
+          docker image inspect ${SLUG}:${{ steps.meta.outputs.version }} # Inspecciona
+
+      # ============================
+      # VERIFICAR MANIFEST (MULTI-ARCH)
+      # ============================
+      - name: Check manifest
+        env:
+          SLUG: ${{ env.REGISTRY_SLUG || inputs.slug }}
+        run: |
+          docker buildx imagetools inspect ${SLUG}:${{ steps.meta.outputs.version }} --format '{{json .}}'

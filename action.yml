@@ -1,0 +1,169 @@
+# https://help.github.com/en/articles/metadata-syntax-for-github-actions
+# ↑ Documentación oficial de cómo se define una GitHub Action
+
+name: Build and push Docker images   # Nombre de la acción
+description: Build and push Docker images with Buildx   # Descripción de lo que hace
+author: docker   # Autor de la acción
+
+branding:
+  icon: 'anchor'   # Ícono que se muestra en GitHub Marketplace
+  color: 'blue'    # Color representativo de la acción
+
+
+inputs:   # Parámetros que el usuario puede enviar a la acción
+
+  add-hosts:
+    description: "List of a customs host-to-IP mapping (e.g., docker:10.180.0.1)" # Permite definir hosts personalizados (nombre-IP)
+    required: false   # No es obligatorio
+
+  allow:
+    description: "List of extra privileged entitlement (e.g., network.host,security.insecure)" # Permisos especiales dentro del contenedor
+    required: false
+
+  annotations:
+    description: "List of annotation to set to the image" # Anotaciones/metadatos para la imagen Docker
+    required: false
+
+  attests:
+    description: "List of attestation parameters (e.g., type=sbom,generator=image)" # Configuración de seguridad (SBOM, provenance, etc.)
+    required: false
+
+  build-args:
+    description: "List of build-time variables" # Variables que se usan durante el build
+    required: false
+
+  build-contexts:
+    description: "List of additional build contexts (e.g., name=path)" # Contextos adicionales de archivos
+    required: false
+
+  builder:
+    description: "Builder instance" # Define qué builder se usa (buildx)
+    required: false
+
+  cache-from:
+    description: "List of external cache sources for buildx (e.g., user/app:cache, type=local,src=path/to/dir)" # Fuentes de cache para acelerar builds
+    required: false
+
+  cache-to:
+    description: "List of cache export destinations for buildx (e.g., user/app:cache, type=local,dest=path/to/dir)" # Dónde se guarda el cache
+    required: false
+
+  call:
+    description: "Set method for evaluating build (e.g., check)" # Método de evaluación del build
+    required: false
+
+  cgroup-parent:
+    description: "Optional parent cgroup for the container used in the build" # Control de recursos del contenedor
+    required: false
+
+  context:
+    description: "Build's context is the set of files located in the specified PATH or URL" # Ruta o URL de los archivos del proyecto
+    required: false
+
+  file:
+    description: "Path to the Dockerfile" # Ruta del Dockerfile
+    required: false
+
+  labels:
+    description: "List of metadata for an image" # Etiquetas/metadatos de la imagen
+    required: false
+
+  load:
+    description: "Load is a shorthand for --output=type=docker" # Carga la imagen en Docker local
+    required: false
+    default: 'false' # Valor por defecto
+
+  network:
+    description: "Set the networking mode for the RUN instructions during build" # Configuración de red durante el build
+    required: false
+
+  no-cache:
+    description: "Do not use cache when building the image" # Evita usar cache
+    required: false
+    default: 'false'
+
+  no-cache-filters:
+    description: "Do not cache specified stages" # Evita cache en etapas específicas
+    required: false
+
+  outputs:
+    description: "List of output destinations (format: type=local,dest=path)" # Define dónde guardar resultados del build
+    required: false
+
+  platforms:
+    description: "List of target platforms for build" # Plataformas (ej: linux/amd64, arm64)
+    required: false
+
+  provenance:
+    description: "Generate provenance attestation for the build (shorthand for --attest=type=provenance)" # Genera información de origen del build
+    required: false
+
+  pull:
+    description: "Always attempt to pull all referenced images" # Siempre descarga imágenes base
+    required: false
+    default: 'false'
+
+  push:
+    description: "Push is a shorthand for --output=type=registry" # Sube la imagen a un registry
+    required: false
+    default: 'false'
+
+  sbom:
+    description: "Generate SBOM attestation for the build (shorthand for --attest=type=sbom)" # Genera SBOM (lista de componentes)
+    required: false
+
+  secrets:
+    description: "List of secrets to expose to the build (e.g., key=string, GIT_AUTH_TOKEN=mytoken)" # Secretos disponibles en el build
+    required: false
+
+  secret-envs:
+    description: "List of secret env vars to expose to the build (e.g., key=envname, MY_SECRET=MY_ENV_VAR)" # Variables de entorno secretas
+    required: false
+
+  secret-files:
+    description: "List of secret files to expose to the build (e.g., key=filename, MY_SECRET=./secret.txt)" # Archivos secretos
+    required: false
+
+  shm-size:
+    description: "Size of /dev/shm (e.g., 2g)" # Tamaño de memoria compartida
+    required: false
+
+  ssh:
+    description: "List of SSH agent socket or keys to expose to the build" # Acceso SSH durante el build
+    required: false
+
+  tags:
+    description: "List of tags" # Etiquetas de la imagen Docker
+    required: false
+
+  target:
+    description: "Sets the target stage to build" # Etapa específica del Dockerfile
+    required: false
+
+  ulimit:
+    description: "Ulimit options (e.g., nofile=1024:1024)" # Límites del sistema (archivos, procesos, etc.)
+    required: false
+
+  github-token:
+    description: "GitHub Token used to authenticate against a repository for Git context" # Token para autenticación en GitHub
+    default: ${{ github.token }} # Usa el token automático de GitHub
+    required: false
+
+
+outputs:   # Valores que la acción devuelve después de ejecutarse
+
+  imageid:
+    description: 'Image ID' # ID de la imagen generada
+
+  digest:
+    description: 'Image digest' # Hash único de la imagen
+
+  metadata:
+    description: 'Build result metadata' # Información adicional del build
+
+
+runs:   # Define cómo se ejecuta la acción
+
+  using: 'node24'   # Indica que usa Node.js versión 24
+  main: 'dist/index.js'   # Archivo principal que se ejecuta
+  post: 'dist/index.js'   # Archivo que se ejecuta al finalizar (cleanup)
