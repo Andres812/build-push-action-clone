@@ -1,12 +1,25 @@
 /coverage
+# Ignora la carpeta donde se guardan los reportes de cobertura de pruebas
 
 # Dependency directories
 node_modules/
+# Ignora la carpeta donde se instalan las dependencias de Node.js
+
 jspm_packages/
+# Ignora dependencias instaladas con JSPM (JavaScript Package Manager)
 
 # yarn v2
 .yarn/cache
+# Cache de dependencias de Yarn (no es necesario subirla)
+
 .yarn/unplugged
+# Dependencias extraídas por Yarn para su ejecución
+
 .yarn/build-state.yml
+# Archivo interno que guarda el estado de construcción de Yarn
+
 .yarn/install-state.gz
+# Archivo comprimido que guarda el estado de instalación
+
 .pnp.*
+# Archivos de Plug and Play de Yarn (resolución de dependencias sin node_modules)
